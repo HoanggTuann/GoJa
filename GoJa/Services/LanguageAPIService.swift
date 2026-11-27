@@ -30,7 +30,10 @@ final class LanguageAPIService {
         let word = rawWord.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !word.isEmpty else { throw LanguageAPIError.emptyQuery }
 
-        async let translationTask = try? translateText(word, from: sourceLang, to: targetLang)
+        async let translationTask: String? = {
+            if sourceLang == targetLang { return nil }
+            return try? await self.translateText(word, from: sourceLang, to: targetLang)
+        }()
         async let dictionaryTask = try? fetchDictionaryEntry(word: word, lang: sourceLang)
 
         let translation = await translationTask
@@ -41,7 +44,9 @@ final class LanguageAPIService {
             phonetic: dictEntry?.phonetic,
             audioURL: dictEntry?.audioURL,
             translation: translation,
-            meanings: dictEntry?.meanings ?? []
+            meanings: dictEntry?.meanings ?? [],
+            sourceLanguageCode: sourceLang,
+            targetLanguageCode: targetLang
         )
     }
 
@@ -50,9 +55,19 @@ final class LanguageAPIService {
         guard !trimmed.isEmpty else { throw LanguageAPIError.emptyQuery }
         if sourceLang == targetLang { return trimmed }
 
+        let chunks = splitIntoChunks(trimmed, maxLength: 420)
+        var results: [String] = []
+        for chunk in chunks {
+            let translated = try await translateSingleChunk(chunk, from: sourceLang, to: targetLang)
+            results.append(translated)
+        }
+        return results.joined(separator: " ")
+    }
+
+    private func translateSingleChunk(_ chunk: String, from sourceLang: String, to targetLang: String) async throws -> String {
         var components = URLComponents(string: "https://api.mymemory.translated.net/get")
         components?.queryItems = [
-            URLQueryItem(name: "q", value: String(trimmed.prefix(480))),
+            URLQueryItem(name: "q", value: chunk),
             URLQueryItem(name: "langpair", value: "\(sourceLang)|\(targetLang)")
         ]
         guard let url = components?.url else { throw LanguageAPIError.invalidURL }
@@ -60,6 +75,28 @@ final class LanguageAPIService {
         let (data, _) = try await session.data(from: url)
         let decoded = try JSONDecoder().decode(MyMemoryResponse.self, from: data)
         return decoded.responseData.translatedText
+    }
+
+    private func splitIntoChunks(_ text: String, maxLength: Int) -> [String] {
+        if text.count <= maxLength { return [text] }
+        var chunks: [String] = []
+        var current = ""
+
+        for word in text.components(separatedBy: .whitespacesAndNewlines) where !word.isEmpty {
+            if current.count + word.count + 1 > maxLength {
+                if !current.isEmpty {
+                    chunks.append(current)
+                    current = ""
+                }
+                if word.count > maxLength {
+                    chunks.append(String(word.prefix(maxLength)))
+                    continue
+                }
+            }
+            current = current.isEmpty ? word : "\(current) \(word)"
+        }
+        if !current.isEmpty { chunks.append(current) }
+        return Array(chunks.prefix(4))
     }
 
     // MARK: - Free Dictionary API
@@ -73,7 +110,8 @@ final class LanguageAPIService {
 
     private func fetchDictionaryEntry(word: String, lang: String) async throws -> DictEntry? {
         guard LanguageOption.find(lang).supportsFreeDictionary else { return nil }
-        guard let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+        guard !word.contains(" "),
+              let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let url = URL(string: "https://api.dictionaryapi.dev/api/v2/entries/\(lang)/\(encoded)") else {
             return nil
         }

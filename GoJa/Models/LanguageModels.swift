@@ -1,23 +1,111 @@
 import Foundation
 
-/// Supported languages for learning and translation.
+/// Supported languages for learning, dictionary lookup, and translation.
 struct LanguageOption: Identifiable, Hashable, Codable {
     let id: String          // ISO 639-1 code (e.g. "en", "ja")
     let name: String        // Display name in Vietnamese
     let nativeName: String  // Native name
+    let flagEmoji: String
     let speechLocale: String
     let supportsFreeDictionary: Bool
+    let isRecommended: Bool
+    let recommendationTag: String
+    let recommendedReason: String
 
     static let all: [LanguageOption] = [
-        LanguageOption(id: "en", name: "Tiếng Anh", nativeName: "English", speechLocale: "en-US", supportsFreeDictionary: true),
-        LanguageOption(id: "ja", name: "Tiếng Nhật", nativeName: "日本語", speechLocale: "ja-JP", supportsFreeDictionary: false),
-        LanguageOption(id: "ko", name: "Tiếng Hàn", nativeName: "한국어", speechLocale: "ko-KR", supportsFreeDictionary: false),
-        LanguageOption(id: "zh", name: "Tiếng Trung", nativeName: "中文", speechLocale: "zh-CN", supportsFreeDictionary: false),
-        LanguageOption(id: "fr", name: "Tiếng Pháp", nativeName: "Français", speechLocale: "fr-FR", supportsFreeDictionary: false),
-        LanguageOption(id: "de", name: "Tiếng Đức", nativeName: "Deutsch", speechLocale: "de-DE", supportsFreeDictionary: false),
-        LanguageOption(id: "es", name: "Tiếng Tây Ban Nha", nativeName: "Español", speechLocale: "es-ES", supportsFreeDictionary: false),
-        LanguageOption(id: "vi", name: "Tiếng Việt", nativeName: "Tiếng Việt", speechLocale: "vi-VN", supportsFreeDictionary: false)
+        LanguageOption(
+            id: "en",
+            name: "Tiếng Anh",
+            nativeName: "English",
+            flagEmoji: "🇬🇧",
+            speechLocale: "en-US",
+            supportsFreeDictionary: true,
+            isRecommended: true,
+            recommendationTag: "Phổ biến nhất",
+            recommendedReason: "Đa dạng bài đọc, hỗ trợ đầy đủ từ điển & phát âm chuẩn."
+        ),
+        LanguageOption(
+            id: "ja",
+            name: "Tiếng Nhật",
+            nativeName: "日本語",
+            flagEmoji: "🇯🇵",
+            speechLocale: "ja-JP",
+            supportsFreeDictionary: false,
+            isRecommended: true,
+            recommendationTag: "Đề xuất hàng đầu",
+            recommendedReason: "Phù hợp học qua tin NHK, Wikipedia & bộ bài học mẫu."
+        ),
+        LanguageOption(
+            id: "ko",
+            name: "Tiếng Hàn",
+            nativeName: "한국어",
+            flagEmoji: "🇰🇷",
+            speechLocale: "ko-KR",
+            supportsFreeDictionary: false,
+            isRecommended: true,
+            recommendationTag: "Xu hướng",
+            recommendedReason: "Dễ bắt đầu với mẫu câu giao tiếp cơ bản & Hangul."
+        ),
+        LanguageOption(
+            id: "zh",
+            name: "Tiếng Trung",
+            nativeName: "中文",
+            flagEmoji: "🇨🇳",
+            speechLocale: "zh-CN",
+            supportsFreeDictionary: false,
+            isRecommended: true,
+            recommendationTag: "Thực tiễn",
+            recommendedReason: "Hỗ trợ Pinyin trong bài học & dịch trực tiếp đa nguồn."
+        ),
+        LanguageOption(
+            id: "fr",
+            name: "Tiếng Pháp",
+            nativeName: "Français",
+            flagEmoji: "🇫🇷",
+            speechLocale: "fr-FR",
+            supportsFreeDictionary: false,
+            isRecommended: false,
+            recommendationTag: "Châu Âu",
+            recommendedReason: "Thích hợp đọc báo quốc tế & luyện nghe giọng chuẩn."
+        ),
+        LanguageOption(
+            id: "de",
+            name: "Tiếng Đức",
+            nativeName: "Deutsch",
+            flagEmoji: "🇩🇪",
+            speechLocale: "de-DE",
+            supportsFreeDictionary: false,
+            isRecommended: false,
+            recommendationTag: "Châu Âu",
+            recommendedReason: "Hữu ích cho du học, kỹ thuật và đọc tài liệu chuyên ngành."
+        ),
+        LanguageOption(
+            id: "es",
+            name: "Tiếng Tây Ban Nha",
+            nativeName: "Español",
+            flagEmoji: "🇪🇸",
+            speechLocale: "es-ES",
+            supportsFreeDictionary: false,
+            isRecommended: false,
+            recommendationTag: "Phổ biến toàn cầu",
+            recommendedReason: "Ngôn ngữ nói rộng rãi thứ hai thế giới, dễ luyện phát âm."
+        ),
+        LanguageOption(
+            id: "vi",
+            name: "Tiếng Việt",
+            nativeName: "Tiếng Việt",
+            flagEmoji: "🇻🇳",
+            speechLocale: "vi-VN",
+            supportsFreeDictionary: false,
+            isRecommended: false,
+            recommendationTag: "Ngôn ngữ chính",
+            recommendedReason: "Dùng làm ngôn ngữ mẹ đẻ hoặc học tiếng Việt cho người nước ngoài."
+        )
     ]
+
+    static var recommendedLearningLanguages: [LanguageOption] {
+        all.filter { $0.isRecommended }
+    }
 
     static func find(_ code: String) -> LanguageOption {
         all.first { $0.id == code } ?? all[0]
@@ -147,4 +235,32 @@ struct WordLookupResult: Identifiable {
     let audioURL: String?
     let translation: String?
     let meanings: [Meaning]
+    let sourceLanguageCode: String
+    let targetLanguageCode: String
+}
+
+/// Recent dictionary/translation query saved locally.
+struct DictionaryHistoryItem: Identifiable, Codable, Hashable {
+    let id: UUID
+    let query: String
+    let translation: String
+    let sourceLanguageCode: String
+    let targetLanguageCode: String
+    let timestamp: Date
+
+    init(
+        id: UUID = UUID(),
+        query: String,
+        translation: String,
+        sourceLanguageCode: String,
+        targetLanguageCode: String,
+        timestamp: Date = Date()
+    ) {
+        self.id = id
+        self.query = query
+        self.translation = translation
+        self.sourceLanguageCode = sourceLanguageCode
+        self.targetLanguageCode = targetLanguageCode
+        self.timestamp = timestamp
+    }
 }

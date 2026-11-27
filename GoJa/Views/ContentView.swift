@@ -5,6 +5,11 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
+            LearnView()
+                .tabItem {
+                    Label("Học tập", systemImage: "graduationcap")
+                }
+
             ExploreView()
                 .tabItem {
                     Label("Đọc & Nguồn", systemImage: "book")

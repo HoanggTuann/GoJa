@@ -1,9 +1,14 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct FlashcardsView: View {
     @EnvironmentObject private var storage: StorageService
     @State private var showReviewSession = false
     @State private var showAddSheet = false
+    @State private var showImporter = false
+    @State private var exportDocument: JaPackDocument?
+    @State private var showExporter = false
+    @State private var statusAlertMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -36,7 +41,7 @@ struct FlashcardsView: View {
 
                 Section("Từ vựng đã lưu (\(storage.flashcards.count))") {
                     if storage.flashcards.isEmpty {
-                        Text("Chưa có từ vựng nào. Hãy tra từ hoặc chạm vào từ khi đọc báo để lưu.")
+                        Text("Chưa có từ vựng nào. Hãy tra từ, chạm vào từ khi đọc báo hoặc nhập gói .japack.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     } else {
@@ -44,6 +49,7 @@ struct FlashcardsView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 6) {
+                                        Text(LanguageOption.find(card.languageCode).flagEmoji)
                                         Text(card.word)
                                             .font(.headline)
                                         if let phonetic = card.phonetic {
@@ -58,7 +64,12 @@ struct FlashcardsView: View {
                                 }
                                 Spacer()
                                 Button {
-                                    SpeechService.shared.speak(text: card.word, languageCode: card.languageCode)
+                                    SpeechService.shared.speak(
+                                        text: card.word,
+                                        languageCode: card.languageCode,
+                                        rate: storage.speechRate,
+                                        forceSynthesizer: true
+                                    )
                                 } label: {
                                     Image(systemName: "speaker.wave.2")
                                 }
@@ -73,7 +84,24 @@ struct FlashcardsView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Ôn tập")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            exportDocument = JaPackDocument(pack: storage.buildExportPack(name: "GoJa Flashcards"))
+                            showExporter = true
+                        } label: {
+                            Label("Xuất gói .japack", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            showImporter = true
+                        } label: {
+                            Label("Nhập gói .japack", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "doc.zipper")
+                    }
+
                     Button {
                         showAddSheet = true
                     } label: {
@@ -87,6 +115,48 @@ struct FlashcardsView: View {
             .sheet(isPresented: $showAddSheet) {
                 AddFlashcardSheet()
             }
+            .fileExporter(
+                isPresented: $showExporter,
+                document: exportDocument,
+                contentType: .jaPack,
+                defaultFilename: "GoJa-Vocabulary.japack"
+            ) { result in
+                switch result {
+                case .success:
+                    statusAlertMessage = "Đã xuất gói từ vựng .japack thành công."
+                case .failure(let error):
+                    statusAlertMessage = "Không thể xuất tệp: \(error.localizedDescription)"
+                }
+            }
+            .fileImporter(
+                isPresented: $showImporter,
+                allowedContentTypes: [.jaPack, .json],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFileImport(result)
+            }
+            .alert("JaPack", isPresented: Binding(
+                get: { statusAlertMessage != nil },
+                set: { if !$0 { statusAlertMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(statusAlertMessage ?? "")
+            }
+        }
+    }
+
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+
+            let data = try Data(contentsOf: url)
+            let summary = try storage.importJaPack(from: data)
+            statusAlertMessage = "Đã nhập \"\(summary.packName)\": +\(summary.addedFlashcards) từ vựng, +\(summary.addedSources) nguồn, +\(summary.addedLessons) bài học."
+        } catch {
+            statusAlertMessage = "Lỗi đọc tệp .japack: \(error.localizedDescription)"
         }
     }
 }
@@ -118,12 +188,31 @@ private struct FlashcardReviewSheet: View {
                                 .foregroundColor(.secondary)
                         }
 
-                        Button {
-                            SpeechService.shared.speak(text: card.word, languageCode: card.languageCode)
-                        } label: {
-                            Label("Phát âm", systemImage: "speaker.wave.2.fill")
+                        HStack(spacing: 10) {
+                            Button {
+                                SpeechService.shared.speak(
+                                    text: card.word,
+                                    languageCode: card.languageCode,
+                                    rate: storage.speechRate,
+                                    forceSynthesizer: true
+                                )
+                            } label: {
+                                Label("Phát âm", systemImage: "speaker.wave.2.fill")
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button {
+                                SpeechService.shared.speak(
+                                    text: card.word,
+                                    languageCode: card.languageCode,
+                                    rate: max(SpeechService.minRate, storage.speechRate - 0.10),
+                                    forceSynthesizer: true
+                                )
+                            } label: {
+                                Label("Chậm", systemImage: "tortoise.fill")
+                            }
+                            .buttonStyle(.bordered)
                         }
-                        .buttonStyle(.bordered)
 
                         if showAnswer {
                             Divider().padding(.vertical, 8)

@@ -37,10 +37,24 @@ struct ArticleReaderView: View {
                     Button {
                         SpeechService.shared.speak(
                             text: fullContent,
-                            languageCode: article.languageCode
+                            languageCode: article.languageCode,
+                            rate: storage.speechRate,
+                            forceSynthesizer: true
                         )
                     } label: {
                         Label("Nghe", systemImage: "speaker.wave.2")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        SpeechService.shared.speak(
+                            text: fullContent,
+                            languageCode: article.languageCode,
+                            rate: max(SpeechService.minRate, storage.speechRate - 0.10),
+                            forceSynthesizer: true
+                        )
+                    } label: {
+                        Label("Chậm", systemImage: "tortoise")
                     }
                     .buttonStyle(.bordered)
 
@@ -50,7 +64,7 @@ struct ArticleReaderView: View {
                         if isTranslating {
                             ProgressView()
                         } else {
-                            Label("Dịch nhanh", systemImage: "translate")
+                            Label("Dịch", systemImage: "translate")
                         }
                     }
                     .buttonStyle(.bordered)
@@ -59,7 +73,7 @@ struct ArticleReaderView: View {
                         Button {
                             showSafari = true
                         } label: {
-                            Label("Web gốc", systemImage: "safari")
+                            Label("Web", systemImage: "safari")
                         }
                         .buttonStyle(.bordered)
                     }
@@ -110,6 +124,9 @@ struct ArticleReaderView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             fullContent = article.content
+        }
+        .onDisappear {
+            SpeechService.shared.stop()
         }
         .sheet(item: $selectedWord) { item in
             WordLookupSheet(
@@ -230,22 +247,88 @@ private struct FlowWordLayout: Layout {
     }
 }
 
-/// Modal sheet for quick word lookup & saving to flashcards while reading.
+/// Modal sheet for quick word lookup while reading, with selectable Dictionary language (Learning / Primary / Custom).
 struct WordLookupSheet: View {
     @EnvironmentObject private var storage: StorageService
     @Environment(\.dismiss) private var dismiss
+
+    enum DictionaryPreset: String, CaseIterable, Identifiable {
+        case learningToPrimary = "Đang học → Chính"
+        case primaryToLearning = "Chính → Đang học"
+        case monolingualLearning = "Từ điển đơn ngữ"
+
+        var id: String { rawValue }
+    }
 
     let word: String
     let sourceLanguageCode: String
     let sourceTitle: String?
 
+    @State private var selectedPreset: DictionaryPreset = .learningToPrimary
+    @State private var dictSourceCode: String = ""
+    @State private var dictTargetCode: String = ""
     @State private var result: WordLookupResult?
     @State private var isLoading = true
     @State private var isSaved = false
 
+    private var activeSourceCode: String {
+        dictSourceCode.isEmpty ? sourceLanguageCode : dictSourceCode
+    }
+
+    private var activeTargetCode: String {
+        dictTargetCode.isEmpty ? storage.nativeLanguageCode : dictTargetCode
+    }
+
     var body: some View {
         NavigationStack {
             List {
+                Section("Ngôn ngữ từ điển & dịch") {
+                    Picker("Chế độ", selection: $selectedPreset) {
+                        ForEach(DictionaryPreset.allCases) { preset in
+                            Text(preset.rawValue).tag(preset)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: selectedPreset) { newPreset in
+                        applyPreset(newPreset)
+                    }
+
+                    HStack {
+                        Picker("Từ điển", selection: Binding(
+                            get: { activeSourceCode },
+                            set: { newCode in
+                                dictSourceCode = newCode
+                                Task { await runLookup() }
+                            }
+                        )) {
+                            ForEach(LanguageOption.all) { lang in
+                                Text("\(lang.flagEmoji) \(lang.name)").tag(lang.id)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .foregroundColor(.secondary)
+                        Spacer()
+
+                        Picker("Nghĩa", selection: Binding(
+                            get: { activeTargetCode },
+                            set: { newCode in
+                                dictTargetCode = newCode
+                                Task { await runLookup() }
+                            }
+                        )) {
+                            ForEach(LanguageOption.all) { lang in
+                                Text("\(lang.flagEmoji) \(lang.name)").tag(lang.id)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                    }
+                }
+
                 if isLoading {
                     HStack {
                         ProgressView()
@@ -264,20 +347,38 @@ struct WordLookupSheet: View {
                                 }
                             }
                             Spacer()
-                            Button {
-                                SpeechService.shared.speak(
-                                    text: result.word,
-                                    languageCode: sourceLanguageCode,
-                                    audioURL: result.audioURL
-                                )
-                            } label: {
-                                Image(systemName: "speaker.wave.2.circle.fill")
-                                    .font(.title2)
+                            HStack(spacing: 12) {
+                                Button {
+                                    SpeechService.shared.speak(
+                                        text: result.word,
+                                        languageCode: activeSourceCode,
+                                        audioURL: result.audioURL,
+                                        rate: storage.speechRate
+                                    )
+                                } label: {
+                                    Image(systemName: "speaker.wave.2.circle.fill")
+                                        .font(.title2)
+                                }
+                                .buttonStyle(.borderless)
+
+                                Button {
+                                    SpeechService.shared.speak(
+                                        text: result.word,
+                                        languageCode: activeSourceCode,
+                                        rate: max(SpeechService.minRate, storage.speechRate - 0.10),
+                                        forceSynthesizer: true
+                                    )
+                                } label: {
+                                    Image(systemName: "tortoise.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.orange)
+                                }
+                                .buttonStyle(.borderless)
                             }
                         }
 
                         if let translation = result.translation {
-                            LabeledContent("Nghĩa (\(storage.nativeLanguage.name))", value: translation)
+                            LabeledContent("Nghĩa (\(LanguageOption.find(activeTargetCode).name))", value: translation)
                         }
                     }
 
@@ -299,10 +400,10 @@ struct WordLookupSheet: View {
                             let card = Flashcard(
                                 word: result.word,
                                 phonetic: result.phonetic,
-                                translation: result.translation ?? "(Chưa có bản dịch)",
+                                translation: result.translation ?? result.meanings.first?.definitions.first ?? "(Chưa có bản dịch)",
                                 definition: result.meanings.first?.definitions.first,
                                 example: result.meanings.first?.examples.first,
-                                languageCode: sourceLanguageCode,
+                                languageCode: activeSourceCode,
                                 sourceTitle: sourceTitle
                             )
                             storage.addOrUpdateFlashcard(card)
@@ -326,15 +427,38 @@ struct WordLookupSheet: View {
                 }
             }
             .task {
-                result = try? await LanguageAPIService.shared.lookupWord(
-                    word,
-                    from: sourceLanguageCode,
-                    to: storage.nativeLanguageCode
-                )
-                isLoading = false
+                dictSourceCode = sourceLanguageCode
+                dictTargetCode = storage.nativeLanguageCode
+                await runLookup()
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private func applyPreset(_ preset: DictionaryPreset) {
+        switch preset {
+        case .learningToPrimary:
+            dictSourceCode = sourceLanguageCode
+            dictTargetCode = storage.nativeLanguageCode
+        case .primaryToLearning:
+            dictSourceCode = storage.nativeLanguageCode
+            dictTargetCode = storage.targetLanguageCode
+        case .monolingualLearning:
+            dictSourceCode = sourceLanguageCode
+            dictTargetCode = sourceLanguageCode
+        }
+        Task { await runLookup() }
+    }
+
+    private func runLookup() async {
+        isLoading = true
+        isSaved = false
+        result = try? await LanguageAPIService.shared.lookupWord(
+            word,
+            from: activeSourceCode,
+            to: activeTargetCode
+        )
+        isLoading = false
     }
 }
 

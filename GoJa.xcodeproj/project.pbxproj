@@ -19,6 +19,10 @@
 		A1000010 /* DictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000010 /* DictionaryView.swift */; };
 		A1000011 /* FlashcardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000011 /* FlashcardsView.swift */; };
 		A1000012 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* SettingsView.swift */; };
+		A1000013 /* JaPackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* JaPackModels.swift */; };
+		A1000014 /* LessonModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000014 /* LessonModels.swift */; };
+		A1000015 /* LessonCatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000015 /* LessonCatalogService.swift */; };
+		A1000016 /* LearnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000016 /* LearnView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +39,11 @@
 		B1000010 /* DictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryView.swift; sourceTree = "<group>"; };
 		B1000011 /* FlashcardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardsView.swift; sourceTree = "<group>"; };
 		B1000012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B1000013 /* JaPackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JaPackModels.swift; sourceTree = "<group>"; };
+		B1000014 /* LessonModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonModels.swift; sourceTree = "<group>"; };
+		B1000015 /* LessonCatalogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonCatalogService.swift; sourceTree = "<group>"; };
+		B1000016 /* LearnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnView.swift; sourceTree = "<group>"; };
+		B1000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +77,7 @@
 			isa = PBXGroup;
 			children = (
 				B1000001 /* GoJaApp.swift */,
+				B1000017 /* Info.plist */,
 				G1000003 /* Models */,
 				G1000004 /* Services */,
 				G1000005 /* Views */,
@@ -79,6 +89,8 @@
 			isa = PBXGroup;
 			children = (
 				B1000002 /* LanguageModels.swift */,
+				B1000013 /* JaPackModels.swift */,
+				B1000014 /* LessonModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -90,6 +102,7 @@
 				B1000004 /* LanguageAPIService.swift */,
 				B1000005 /* WebContentService.swift */,
 				B1000006 /* SpeechService.swift */,
+				B1000015 /* LessonCatalogService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -98,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				B1000007 /* ContentView.swift */,
+				B1000016 /* LearnView.swift */,
 				B1000008 /* ExploreView.swift */,
 				B1000009 /* ArticleReaderView.swift */,
 				B1000010 /* DictionaryView.swift */,
@@ -162,11 +176,15 @@
 			files = (
 				A1000001 /* GoJaApp.swift in Sources */,
 				A1000002 /* LanguageModels.swift in Sources */,
+				A1000013 /* JaPackModels.swift in Sources */,
+				A1000014 /* LessonModels.swift in Sources */,
 				A1000003 /* StorageService.swift in Sources */,
 				A1000004 /* LanguageAPIService.swift in Sources */,
 				A1000005 /* WebContentService.swift in Sources */,
 				A1000006 /* SpeechService.swift in Sources */,
+				A1000015 /* LessonCatalogService.swift in Sources */,
 				A1000007 /* ContentView.swift in Sources */,
+				A1000016 /* LearnView.swift in Sources */,
 				A1000008 /* ExploreView.swift in Sources */,
 				A1000009 /* ArticleReaderView.swift in Sources */,
 				A1000010 /* DictionaryView.swift in Sources */,
@@ -219,6 +237,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GoJa/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -243,6 +262,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GoJa/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
