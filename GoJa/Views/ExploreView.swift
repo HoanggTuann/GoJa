@@ -8,6 +8,7 @@ struct ExploreView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedArticle: LearningArticle?
+    @State private var showSelectedArticle = false
 
     var body: some View {
         NavigationStack {
@@ -94,8 +95,10 @@ struct ExploreView: View {
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
-            .navigationDestination(item: $selectedArticle) { article in
-                ArticleReaderView(article: article)
+            .navigationDestination(isPresented: $showSelectedArticle) {
+                if let selectedArticle {
+                    ArticleReaderView(article: selectedArticle)
+                }
             }
             .task {
                 if articles.isEmpty {
@@ -132,6 +135,7 @@ struct ExploreView: View {
             )
             articles.insert(article, at: 0)
             selectedArticle = article
+            showSelectedArticle = true
         } catch {
             errorMessage = "Không thể mở trang web: \(error.localizedDescription)"
         }
