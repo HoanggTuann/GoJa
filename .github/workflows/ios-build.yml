@@ -1,4 +1,4 @@
-name: Build iOS App
+name: Build iOS IPA
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Compile & Build GoJa (iOS 16+)
+  build-ipa:
+    name: Build GoJa.ipa (Real iOS 16+)
     runs-on: macos-latest
 
     steps:
@@ -17,20 +17,29 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Build GoJa for iOS Simulator
+      - name: Build GoJa (Release - iphoneos)
         run: |
           xcodebuild build \
             -project GoJa.xcodeproj \
             -scheme GoJa \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload GoJa.app Artifact
+      - name: Package Unsigned IPA
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/GoJa.app build/ipa/Payload/
+          cd build/ipa
+          zip -r -q GoJa.ipa Payload
+          ls -lh GoJa.ipa
+
+      - name: Upload GoJa.ipa Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GoJa-iOS-Simulator-App
-          path: build/DerivedData/Build/Products/Debug-iphonesimulator/GoJa.app
+          name: GoJa-iOS-IPA
+          path: build/ipa/GoJa.ipa
