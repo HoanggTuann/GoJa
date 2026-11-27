@@ -264,7 +264,7 @@
 
 /* Begin XCConfigurationList section */
 		C1000001 /* Build configuration list for PBXProject "GoJa" */ = {
-			isa = PBXConfigurationList;
+			isa = XCConfigurationList;
 			buildConfigurations = (
 				CFG00001 /* Debug */,
 				CFG00002 /* Release */,
@@ -273,7 +273,7 @@
 			defaultConfigurationName = Debug;
 		};
 		C1000003 /* Build configuration list for PBXNativeTarget "GoJa" */ = {
-			isa = PBXConfigurationList;
+			isa = XCConfigurationList;
 			buildConfigurations = (
 				CFG00003 /* Debug */,
 				CFG00004 /* Release */,
