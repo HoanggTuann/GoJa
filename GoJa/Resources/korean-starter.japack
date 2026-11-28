@@ -1,0 +1,21 @@
+{
+  "format": "JaPack",
+  "version": 1,
+  "name": "Tiếng Hàn Cơ Bản (Mẫu)",
+  "summary": "10 từ vựng tiếng Hàn thông dụng theo cấu trúc từ - nghĩa - cách đọc",
+  "author": "GoJa",
+  "language": "ko",
+  "nativeLanguage": "vi",
+  "items": [
+    { "tu": "안녕하세요", "nghia": "Xin chào", "cachDoc": "annyeonghaseyo" },
+    { "tu": "감사합니다", "nghia": "Xin cảm ơn", "cachDoc": "gamsahamnida" },
+    { "tu": "죄송합니다", "nghia": "Xin lỗi", "cachDoc": "joesonghamnida" },
+    { "tu": "물", "nghia": "Nước", "cachDoc": "mul" },
+    { "tu": "얼마예요", "nghia": "Bao nhiêu tiền?", "cachDoc": "eolmayeyo" },
+    { "tu": "맛있어요", "nghia": "Ngon quá", "cachDoc": "masisseoyo" },
+    { "tu": "괜찮아요", "nghia": "Không sao đâu", "cachDoc": "gwaenchanayo" },
+    { "tu": "친구", "nghia": "Bạn bè", "cachDoc": "chingu" },
+    { "tu": "사랑해요", "nghia": "Tôi yêu bạn", "cachDoc": "saranghaeyo" },
+    { "tu": "안녕히 계세요", "nghia": "Tạm biệt (người ở lại)", "cachDoc": "annyeonghi gyeseyo" }
+  ]
+}

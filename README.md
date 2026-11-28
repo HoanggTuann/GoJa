@@ -2,20 +2,30 @@
 
 Ứng dụng SwiftUI thuần (giao diện iOS chuẩn), hỗ trợ từ **iOS 16.0+** trở lên, không cần thư viện bên ngoài hay API key trả phí.
 
+## Cấu trúc gói `.japack` (JSON đổi đuôi)
+Bạn có thể tạo file `.japack` mới hoặc nối thêm từ vựng vào cuối mảng `items` theo cấu trúc **`từ - nghĩa - cách đọc`**:
+
+```json
+{
+  "format": "JaPack",
+  "version": 1,
+  "name": "Tiếng Nhật Giao Tiếp",
+  "language": "ja",
+  "nativeLanguage": "vi",
+  "items": [
+    { "tu": "おはようございます", "nghia": "Chào buổi sáng", "cachDoc": "ohayō gozaimasu" },
+    { "tu": "ありがとう", "nghia": "Cảm ơn", "cachDoc": "arigatō" }
+  ]
+}
+```
+
+- Khi nhập file `.japack` (qua tab **Học tập**, **Cài đặt**, **Ôn tập**, hoặc URL web), GoJa sẽ:
+  1. Nạp toàn bộ danh sách `items` vào **Flashcard**.
+  2. Tự động chia nhóm và cập nhật **Lộ trình bài học** (trắc nghiệm, nghe, ghép câu) cho ngôn ngữ của gói đó.
+- Có sẵn 3 gói mẫu để test ngay trong thư mục `SampleJaPacks/` và tích hợp sẵn bên trong app (`japanese-starter.japack`, `english-daily.japack`, `korean-starter.japack`).
+
 ## Tính năng chính
-1. **Học tập kiểu Duolingo & Streak (`LearnView`)**:
-   - Lộ trình bài học theo từng ngôn ngữ (Anh, Nhật, Hàn, Trung, Pháp, Đức, Tây Ban Nha, Việt) với các dạng bài tập tương tác: Chọn nghĩa, Nghe & chọn, Ghép câu từ vựng, Điền đáp án.
-   - Bài luyện tập tự động sinh từ Flashcard đã lưu.
-   - Theo dõi **Chuỗi Streak**, **XP hằng ngày**, lịch sử hoạt động 7 ngày gần nhất.
-2. **Đọc & Nguồn (`ExploreView`, `ArticleReaderView`)**:
-   - Đọc bài từ **Wikipedia REST API**, **RSS/Atom Feed**, hoặc nhập bất kỳ **URL trang web** nào.
-   - **Tra từ nhanh (`WordLookupSheet`)** ngay khi chạm vào từ trong bài đọc: cho phép chọn nhanh chế độ từ điển (**Đang học → Chính**, **Chính → Đang học**, **Từ điển đơn ngữ**) hoặc chọn bất kỳ cặp ngôn ngữ nào, nghe phát âm tốc độ thường/chậm và lưu Flashcard.
-3. **Tra từ & Dịch (`DictionaryView`)**:
-   - Linh hoạt chuyển đổi mọi cặp ngôn ngữ, nút đảo chiều nhanh, dán/sao chép, nghe phát âm chuẩn/chậm và lịch sử tra cứu.
-   - Tích hợp **Free Dictionary API** và **MyMemory Translation API** (hỗ trợ chia đoạn dài).
-4. **Định dạng JaPack (`.japack`)**:
-   - Lưu trữ cục bộ (`GoJaLibrary.japack`) và hỗ trợ xuất/nhập/chia sẻ gói học tập (`.japack` — định dạng JSON đổi đuôi) gồm từ vựng, nguồn web và bài học từ tệp hoặc URL.
-5. **Cài đặt (`SettingsView`)**:
-   - Tuỳ chọn **Đề xuất ngôn ngữ học** nổi bật.
-   - Thanh trượt tuỳ chỉnh **Tốc độ phát âm** (mặc định chậm rõ `0.40` phù hợp người học) kèm nút nghe thử.
-   - Quản lý nguồn RSS/Web và mục tiêu XP/Flashcard mỗi ngày.
+1. **Học tập kiểu Duolingo & Streak (`LearnView`)**: Lộ trình bài học theo ngôn ngữ, bài luyện tập từ Flashcard & `.japack`, chuỗi Streak, XP mỗi ngày và lịch 7 ngày.
+2. **Đọc & Nguồn (`ExploreView`, `ArticleReaderView`)**: Wikipedia REST API, RSS Feed, đọc URL web bất kỳ; chạm từng từ để mở **Tra cứu nhanh** có tuỳ chọn ngôn ngữ từ điển (**Đang học → Chính**, **Chính → Đang học**, **Từ điển đơn ngữ**).
+3. **Tra từ & Dịch (`DictionaryView`)**: Free Dictionary API + MyMemory Translation API, đổi tự do mọi cặp ngôn ngữ, đảo chiều nhanh, lịch sử tra cứu.
+4. **Cài đặt (`SettingsView`)**: Đề xuất ngôn ngữ học, thanh trượt tuỳ chỉnh tốc độ phát âm (mặc định `0.40` chậm rõ), quản lý `.japack` và nguồn web/RSS.

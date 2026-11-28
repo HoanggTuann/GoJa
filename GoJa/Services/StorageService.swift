@@ -7,6 +7,7 @@ final class StorageService: ObservableObject {
     @Published var flashcards: [Flashcard] = []
     @Published var sources: [WebSource] = []
     @Published var customLessons: [LessonUnit] = []
+    @Published var importedPacks: [ImportedPackRecord] = []
     @Published var lookupHistory: [DictionaryHistoryItem] = []
     @Published var streakStats: StreakStats = StreakStats()
 
@@ -51,12 +52,12 @@ final class StorageService: ObservableObject {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
-    /// Primary local library stored in `.japack` format (JSON payload with .japack extension).
     private var libraryJaPackURL: URL { documentsURL.appendingPathComponent("GoJaLibrary.japack") }
     private var legacyFlashcardsURL: URL { documentsURL.appendingPathComponent("flashcards.json") }
     private var legacySourcesURL: URL { documentsURL.appendingPathComponent("sources.json") }
     private var streakURL: URL { documentsURL.appendingPathComponent("streak_stats.json") }
     private var historyURL: URL { documentsURL.appendingPathComponent("lookup_history.json") }
+    private var packsIndexURL: URL { documentsURL.appendingPathComponent("imported_packs.json") }
 
     init() {
         self.targetLanguageCode = UserDefaults.standard.string(forKey: Keys.targetLanguage) ?? "en"
@@ -84,6 +85,7 @@ final class StorageService: ObservableObject {
         loadLibrary()
         loadStreakStats()
         loadHistory()
+        loadImportedPacksIndex()
     }
 
     var targetLanguage: LanguageOption { LanguageOption.find(targetLanguageCode) }
@@ -97,7 +99,6 @@ final class StorageService: ObservableObject {
 
     func applySuggestedLanguage(_ code: String) {
         targetLanguageCode = code
-        // Ensure a Wikipedia source exists for the chosen language
         let wikiURL = "https://\(code).wikipedia.org/api/rest_v1/page/random/summary"
         if !sources.contains(where: { $0.kind == .wikipedia && $0.languageCode == code }) {
             let lang = LanguageOption.find(code)
@@ -229,10 +230,7 @@ final class StorageService: ObservableObject {
         if !streakStats.studyDays.contains(todayKey) {
             if streakStats.studyDays.contains(yesterdayKey) {
                 streakStats.currentStreak += 1
-            } else if streakStats.currentStreak == 0 {
-                streakStats.currentStreak = 1
             } else {
-                // Missed a day; prepare for future Streak Freeze logic or reset to 1
                 streakStats.currentStreak = 1
             }
             streakStats.studyDays.append(todayKey)
@@ -267,14 +265,41 @@ final class StorageService: ObservableObject {
         return formatter.string(from: date)
     }
 
-    // MARK: - JaPack (.japack) Export & Import
+    // MARK: - JaPack (.japack) Bundled Samples, Export & Import
+
+    struct BundledSamplePack: Identifiable {
+        let id: String
+        let url: URL
+        let pack: GoJaPack
+    }
+
+    func bundledSamplePacks() -> [BundledSamplePack] {
+        let urls = Bundle.main.urls(forResourcesWithExtension: "japack", subdirectory: nil) ?? []
+        return urls.compactMap { url in
+            guard let data = try? Data(contentsOf: url),
+                  let pack = try? GoJaPack.decode(from: data) else { return nil }
+            return BundledSamplePack(id: url.lastPathComponent, url: url, pack: pack)
+        }
+        .sorted { $0.pack.name < $1.pack.name }
+    }
 
     func buildExportPack(name: String = "GoJa Pack") -> GoJaPack {
-        GoJaPack(
+        let exportedItems = flashcards.map { card in
+            JaPackEntry(
+                tu: card.word,
+                nghia: card.translation,
+                cachDoc: card.phonetic ?? "",
+                bai: card.sourceTitle,
+                viDu: card.example
+            )
+        }
+
+        return GoJaPack(
             name: name,
             summary: "Xuất từ GoJa (\(flashcards.count) từ vựng, \(sources.count) nguồn, \(customLessons.count) bài học)",
             targetLanguageCode: targetLanguageCode,
             nativeLanguageCode: nativeLanguageCode,
+            items: exportedItems,
             flashcards: flashcards,
             sources: sources,
             lessons: customLessons
@@ -293,10 +318,35 @@ final class StorageService: ObservableObject {
     }
 
     @discardableResult
-    func importJaPack(from data: Data) throws -> JaPackImportResult {
+    func importJaPack(from data: Data, switchToPackLanguage: Bool = true) throws -> JaPackImportResult {
         let pack = try GoJaPack.decode(from: data)
 
         var addedCards = 0
+
+        // 1. Import sequential `từ - nghĩa - cách đọc` entries into flashcards
+        for entry in pack.items {
+            let card = Flashcard(
+                word: entry.tu,
+                phonetic: entry.cachDoc.isEmpty ? nil : entry.cachDoc,
+                translation: entry.nghia,
+                example: entry.viDu,
+                languageCode: pack.targetLanguageCode,
+                sourceTitle: entry.bai ?? pack.name
+            )
+            if let idx = flashcards.firstIndex(where: {
+                $0.word.caseInsensitiveCompare(card.word) == .orderedSame &&
+                $0.languageCode == card.languageCode
+            }) {
+                flashcards[idx].translation = card.translation
+                if let phonetic = card.phonetic { flashcards[idx].phonetic = phonetic }
+                if let example = card.example { flashcards[idx].example = example }
+            } else {
+                flashcards.insert(card, at: 0)
+                addedCards += 1
+            }
+        }
+
+        // 2. Also import explicit Flashcards if included
         for card in pack.flashcards {
             if !flashcards.contains(where: {
                 $0.word.caseInsensitiveCompare(card.word) == .orderedSame &&
@@ -307,6 +357,7 @@ final class StorageService: ObservableObject {
             }
         }
 
+        // 3. Import Web/RSS sources
         var addedSources = 0
         for source in pack.sources {
             if !sources.contains(where: { $0.urlString == source.urlString }) {
@@ -315,20 +366,47 @@ final class StorageService: ObservableObject {
             }
         }
 
+        // 4. Generate/Update Learning Path units directly from pack.items + explicit pack.lessons
+        let generatedFromItems = LessonCatalogService.buildLessons(from: pack)
+        let combinedPackLessons = generatedFromItems + pack.lessons.filter { explicit in
+            !generatedFromItems.contains(where: { $0.id == explicit.id })
+        }
+
         var addedLessons = 0
-        for lesson in pack.lessons {
-            if !customLessons.contains(where: { $0.id == lesson.id }) {
+        for lesson in combinedPackLessons {
+            if let existingIdx = customLessons.firstIndex(where: { $0.id == lesson.id }) {
+                customLessons[existingIdx] = lesson
+            } else {
                 customLessons.append(lesson)
                 addedLessons += 1
             }
         }
 
+        // 5. Record imported pack metadata
+        let record = ImportedPackRecord(
+            id: pack.id,
+            name: pack.name,
+            summary: pack.summary,
+            languageCode: pack.targetLanguageCode,
+            itemCount: pack.items.count + pack.flashcards.count,
+            generatedLessonCount: combinedPackLessons.count,
+            importedAt: Date()
+        )
+        importedPacks.removeAll { $0.name == record.name && $0.languageCode == record.languageCode }
+        importedPacks.insert(record, at: 0)
+        saveImportedPacksIndex()
+
+        if switchToPackLanguage {
+            applySuggestedLanguage(pack.targetLanguageCode)
+        }
+
         saveLibrary()
         return JaPackImportResult(
             packName: pack.name,
+            languageCode: pack.targetLanguageCode,
             addedFlashcards: addedCards,
             addedSources: addedSources,
-            addedLessons: addedLessons
+            addedLessons: addedLessons > 0 ? addedLessons : combinedPackLessons.count
         )
     }
 
@@ -351,7 +429,6 @@ final class StorageService: ObservableObject {
             return
         }
 
-        // Migrate legacy .json files if present
         if let fData = try? Data(contentsOf: legacyFlashcardsURL),
            let decoded = try? JSONDecoder().decode([Flashcard].self, from: fData) {
             flashcards = decoded
@@ -403,6 +480,20 @@ final class StorageService: ObservableObject {
     private func saveHistory() {
         guard let data = try? JSONEncoder().encode(lookupHistory) else { return }
         try? data.write(to: historyURL, options: .atomic)
+    }
+
+    private func loadImportedPacksIndex() {
+        guard let data = try? Data(contentsOf: packsIndexURL),
+              let decoded = try? JSONDecoder().decode([ImportedPackRecord].self, from: data) else {
+            importedPacks = []
+            return
+        }
+        importedPacks = decoded
+    }
+
+    private func saveImportedPacksIndex() {
+        guard let data = try? JSONEncoder().encode(importedPacks) else { return }
+        try? data.write(to: packsIndexURL, options: .atomic)
     }
 
     static let defaultSources: [WebSource] = [

@@ -1,0 +1,26 @@
+{
+  "format": "JaPack",
+  "version": 1,
+  "name": "English Daily Pack (Mẫu)",
+  "summary": "15 từ vựng tiếng Anh thông dụng theo cấu trúc từ - nghĩa - cách đọc",
+  "author": "GoJa",
+  "language": "en",
+  "nativeLanguage": "vi",
+  "items": [
+    { "tu": "Good morning", "nghia": "Chào buổi sáng", "cachDoc": "/ɡʊd ˈmɔːrnɪŋ/" },
+    { "tu": "Knowledge", "nghia": "Kiến thức", "cachDoc": "/ˈnɒlɪdʒ/" },
+    { "tu": "Schedule", "nghia": "Lịch trình", "cachDoc": "/ˈskedʒuːl/" },
+    { "tu": "Experience", "nghia": "Kinh nghiệm / Trải nghiệm", "cachDoc": "/ɪkˈspɪəriəns/" },
+    { "tu": "Recommend", "nghia": "Đề xuất / Gợi ý", "cachDoc": "/ˌrekəˈmend/" },
+    { "tu": "Opportunity", "nghia": "Cơ hội", "cachDoc": "/ˌɒpəˈtjuːnəti/" },
+    { "tu": "Consistent", "nghia": "Kiên trì / Nhất quán", "cachDoc": "/kənˈsɪstənt/" },
+    { "tu": "Appreciate", "nghia": "Trân trọng / Cảm kích", "cachDoc": "/əˈpriːʃieɪt/" },
+    { "tu": "Vocabulary", "nghia": "Từ vựng", "cachDoc": "/vəˈkæbjələri/" },
+    { "tu": "Pronunciation", "nghia": "Phát âm", "cachDoc": "/prəˌnʌnsiˈeɪʃən/" },
+    { "tu": "Conversation", "nghia": "Cuộc hội thoại", "cachDoc": "/ˌkɒnvəˈseɪʃən/" },
+    { "tu": "Fluency", "nghia": "Sự trôi chảy", "cachDoc": "/ˈfluːənsi/" },
+    { "tu": "Achievement", "nghia": "Thành tựu", "cachDoc": "/əˈtʃiːvmənt/" },
+    { "tu": "Challenge", "nghia": "Thử thách", "cachDoc": "/ˈtʃælɪndʒ/" },
+    { "tu": "Improve", "nghia": "Cải thiện", "cachDoc": "/ɪmˈpruːv/" }
+  ]
+}

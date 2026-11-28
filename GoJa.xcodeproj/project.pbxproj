@@ -23,6 +23,9 @@
 		A1000014 /* LessonModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000014 /* LessonModels.swift */; };
 		A1000015 /* LessonCatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000015 /* LessonCatalogService.swift */; };
 		A1000016 /* LearnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000016 /* LearnView.swift */; };
+		A2000001 /* japanese-starter.japack in Resources */ = {isa = PBXBuildFile; fileRef = B2000001 /* japanese-starter.japack */; };
+		A2000002 /* english-daily.japack in Resources */ = {isa = PBXBuildFile; fileRef = B2000002 /* english-daily.japack */; };
+		A2000003 /* korean-starter.japack in Resources */ = {isa = PBXBuildFile; fileRef = B2000003 /* korean-starter.japack */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +47,9 @@
 		B1000015 /* LessonCatalogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonCatalogService.swift; sourceTree = "<group>"; };
 		B1000016 /* LearnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnView.swift; sourceTree = "<group>"; };
 		B1000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B2000001 /* japanese-starter.japack */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "japanese-starter.japack"; sourceTree = "<group>"; };
+		B2000002 /* english-daily.japack */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "english-daily.japack"; sourceTree = "<group>"; };
+		B2000003 /* korean-starter.japack */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "korean-starter.japack"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +87,7 @@
 				G1000003 /* Models */,
 				G1000004 /* Services */,
 				G1000005 /* Views */,
+				G1000006 /* Resources */,
 			);
 			path = GoJa;
 			sourceTree = "<group>";
@@ -121,6 +128,16 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		G1000006 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B2000001 /* japanese-starter.japack */,
+				B2000002 /* english-daily.japack */,
+				B2000003 /* korean-starter.japack */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -130,6 +147,7 @@
 			buildPhases = (
 				S1000001 /* Sources */,
 				F1000001 /* Frameworks */,
+				R1000001 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -168,6 +186,19 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R1000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2000001 /* japanese-starter.japack in Resources */,
+				A2000002 /* english-daily.japack in Resources */,
+				A2000003 /* korean-starter.japack in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		S1000001 /* Sources */ = {

@@ -1,8 +1,11 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LearnView: View {
     @EnvironmentObject private var storage: StorageService
     @State private var activeLesson: LessonUnit?
+    @State private var showJaPackImporter = false
+    @State private var packImportNotice: String?
 
     private var curriculumLessons: [LessonUnit] {
         LessonCatalogService.lessons(
@@ -16,6 +19,10 @@ struct LearnView: View {
             from: storage.flashcards,
             languageCode: storage.targetLanguageCode
         )
+    }
+
+    private var samplePacks: [StorageService.BundledSamplePack] {
+        storage.bundledSamplePacks()
     }
 
     var body: some View {
@@ -124,7 +131,7 @@ struct LearnView: View {
 
                 Section("Lộ trình bài học (\(storage.targetLanguage.nativeName))") {
                     if curriculumLessons.isEmpty {
-                        Text("Chưa có bài học cho ngôn ngữ này. Bạn có thể nhập thêm gói .japack trong phần Cài đặt.")
+                        Text("Chưa có bài học cho ngôn ngữ này. Bạn có thể nhập thêm gói .japack bên dưới.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     } else {
@@ -140,12 +147,89 @@ struct LearnView: View {
                         }
                     }
                 }
+
+                Section {
+                    ForEach(samplePacks) { sample in
+                        let isImported = storage.importedPacks.contains(where: {
+                            $0.name == sample.pack.name && $0.languageCode == sample.pack.targetLanguageCode
+                        })
+                        Button {
+                            loadSamplePack(sample)
+                        } label: {
+                            HStack {
+                                Text(LanguageOption.find(sample.pack.targetLanguageCode).flagEmoji)
+                                    .font(.title3)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(sample.pack.name)
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.primary)
+                                    Text("\(sample.pack.items.count) từ (từ - nghĩa - cách đọc) • tự tạo lộ trình")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text(isImported ? "Đã nạp" : "Nạp test")
+                                    .font(.caption.bold())
+                                    .foregroundColor(isImported ? .green : .accentColor)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Button {
+                        showJaPackImporter = true
+                    } label: {
+                        Label("Nhập tệp .japack của riêng bạn", systemImage: "square.and.arrow.down")
+                    }
+                } header: {
+                    Text("Gói JaPack (.japack)")
+                } footer: {
+                    Text("Nạp gói .japack (từ - nghĩa - cách đọc) sẽ tự động thêm Flashcard và cập nhật Lộ trình bài học ở trên.")
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Học tập")
             .fullScreenCover(item: $activeLesson) { lesson in
                 LessonSessionView(lesson: lesson)
             }
+            .fileImporter(
+                isPresented: $showJaPackImporter,
+                allowedContentTypes: [.jaPack, .json],
+                allowsMultipleSelection: false
+            ) { result in
+                importJaPackFile(result)
+            }
+            .alert("Cập nhật từ JaPack", isPresented: Binding(
+                get: { packImportNotice != nil },
+                set: { if !$0 { packImportNotice = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(packImportNotice ?? "")
+            }
+        }
+    }
+
+    private func loadSamplePack(_ sample: StorageService.BundledSamplePack) {
+        do {
+            let data = try Data(contentsOf: sample.url)
+            let result = try storage.importJaPack(from: data, switchToPackLanguage: true)
+            packImportNotice = "Đã nạp \"\(result.packName)\" (\(LanguageOption.find(result.languageCode).name)): +\(result.addedFlashcards) từ mới và cập nhật \(result.addedLessons) bài học vào lộ trình."
+        } catch {
+            packImportNotice = "Không thể nạp gói mẫu: \(error.localizedDescription)"
+        }
+    }
+
+    private func importJaPackFile(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            let data = try Data(contentsOf: url)
+            let summary = try storage.importJaPack(from: data, switchToPackLanguage: true)
+            packImportNotice = "Đã nhập \"\(summary.packName)\": +\(summary.addedFlashcards) từ mới, cập nhật \(summary.addedLessons) bài học cho \(LanguageOption.find(summary.languageCode).name)."
+        } catch {
+            packImportNotice = "Lỗi đọc tệp .japack: \(error.localizedDescription)"
         }
     }
 }

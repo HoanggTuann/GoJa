@@ -1,11 +1,148 @@
 import Foundation
 
-/// Provides built-in Duolingo-style guided lessons and generates dynamic practice lessons from saved flashcards.
+/// Provides built-in Duolingo-style guided lessons and generates dynamic lessons from `.japack` entries & flashcards.
 enum LessonCatalogService {
     static func lessons(for languageCode: String, customLessons: [LessonUnit] = []) -> [LessonUnit] {
-        let builtIn = builtInLessons.filter { $0.languageCode == languageCode }
         let imported = customLessons.filter { $0.languageCode == languageCode }
-        return (builtIn + imported).sorted { $0.unitNumber < $1.unitNumber }
+        let builtIn = builtInLessons.filter { $0.languageCode == languageCode }
+        // Show imported/generated JaPack curriculum units alongside built-in starter units
+        return (imported + builtIn).sorted { $0.unitNumber < $1.unitNumber }
+    }
+
+    /// Generates progressive Duolingo-style lesson units from sequential `từ - nghĩa - cách đọc` entries in a `.japack` file.
+    static func buildLessons(from pack: GoJaPack) -> [LessonUnit] {
+        let entries = pack.items
+        guard !entries.isEmpty else { return pack.lessons }
+
+        let allMeanings = Array(Set(entries.map(\.nghia))).filter { !$0.isEmpty }
+        let allWords = Array(Set(entries.map(\.tu))).filter { !$0.isEmpty }
+
+        // Group by explicit `bai` (unit) if provided, otherwise chunk sequentially by 5 entries until finished
+        let groupedUnits: [(title: String, entries: [JaPackEntry])]
+        if entries.contains(where: { !($0.bai ?? "").isEmpty }) {
+            var order: [String] = []
+            var map: [String: [JaPackEntry]] = [:]
+            for entry in entries {
+                let key = (entry.bai?.isEmpty == false ? entry.bai! : "Phần chung")
+                if map[key] == nil { order.append(key) }
+                map[key, default: []].append(entry)
+            }
+            groupedUnits = order.map { ($0, map[$0] ?? []) }
+        } else {
+            let chunkSize = 5
+            var chunks: [(title: String, entries: [JaPackEntry])] = []
+            var idx = 0
+            var part = 1
+            while idx < entries.count {
+                let end = min(idx + chunkSize, entries.count)
+                chunks.append(("\(pack.name) • Phần \(part)", Array(entries[idx..<end])))
+                idx = end
+                part += 1
+            }
+            groupedUnits = chunks
+        }
+
+        let safePackSlug = pack.name
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+
+        return groupedUnits.enumerated().map { unitIdx, group in
+            let unitNumber = unitIdx + 1
+            var exercises: [LessonExercise] = []
+
+            for (itemIdx, entry) in group.entries.enumerated() {
+                let meaningDistractors = allMeanings.filter { $0 != entry.nghia }.shuffled()
+                let wordDistractors = allWords.filter { $0 != entry.tu }.shuffled()
+
+                // Exercise 1: Meaning multiple choice (shows word + reading)
+                let mcOptions = ([entry.nghia] + Array(meaningDistractors.prefix(3))).shuffled()
+                exercises.append(
+                    LessonExercise(
+                        id: "japack-\(safePackSlug)-u\(unitNumber)-mc-\(itemIdx)",
+                        kind: .multipleChoice,
+                        prompt: "Chọn nghĩa đúng của từ sau",
+                        targetText: entry.tu,
+                        phonetic: entry.cachDoc.isEmpty ? nil : entry.cachDoc,
+                        correctAnswer: entry.nghia,
+                        options: mcOptions.count >= 2 ? mcOptions : [entry.nghia, "Chưa rõ"],
+                        explanation: buildExplanation(for: entry)
+                    )
+                )
+
+                // Exercise 2: Listening or Reverse recall / Word Builder
+                if itemIdx % 3 == 1 && entry.tu.split(separator: " ").count >= 2 {
+                    let tokens = entry.tu.split(separator: " ").map(String.init)
+                    let extraWords = Array(wordDistractors.prefix(2))
+                    exercises.append(
+                        LessonExercise(
+                            id: "japack-\(safePackSlug)-u\(unitNumber)-wb-\(itemIdx)",
+                            kind: .wordBuilder,
+                            prompt: "Ghép câu đúng cho nghĩa: \"\(entry.nghia)\"",
+                            targetText: entry.tu,
+                            phonetic: entry.cachDoc.isEmpty ? nil : entry.cachDoc,
+                            correctAnswer: entry.tu,
+                            options: (tokens + extraWords).shuffled(),
+                            explanation: buildExplanation(for: entry)
+                        )
+                    )
+                } else if itemIdx % 2 == 1 {
+                    let listenOptions = ([entry.nghia] + Array(meaningDistractors.prefix(3))).shuffled()
+                    exercises.append(
+                        LessonExercise(
+                            id: "japack-\(safePackSlug)-u\(unitNumber)-ls-\(itemIdx)",
+                            kind: .listening,
+                            prompt: "Nghe phát âm và chọn nghĩa đúng",
+                            targetText: entry.tu,
+                            phonetic: entry.cachDoc.isEmpty ? nil : entry.cachDoc,
+                            correctAnswer: entry.nghia,
+                            options: listenOptions.count >= 2 ? listenOptions : [entry.nghia, "Chưa rõ"],
+                            explanation: buildExplanation(for: entry)
+                        )
+                    )
+                } else if wordDistractors.count >= 2 {
+                    let reverseOptions = ([entry.tu] + Array(wordDistractors.prefix(3))).shuffled()
+                    exercises.append(
+                        LessonExercise(
+                            id: "japack-\(safePackSlug)-u\(unitNumber)-rv-\(itemIdx)",
+                            kind: .multipleChoice,
+                            prompt: "Từ nào có nghĩa là \"\(entry.nghia)\"?",
+                            targetText: entry.nghia,
+                            phonetic: entry.cachDoc.isEmpty ? nil : "Cách đọc: \(entry.cachDoc)",
+                            correctAnswer: entry.tu,
+                            options: reverseOptions,
+                            explanation: buildExplanation(for: entry)
+                        )
+                    )
+                }
+            }
+
+            let previewWords = group.entries.prefix(3).map(\.tu).joined(separator: ", ")
+            return LessonUnit(
+                id: "japack-\(pack.targetLanguageCode)-\(safePackSlug)-u\(unitNumber)",
+                languageCode: pack.targetLanguageCode,
+                unitNumber: unitNumber,
+                title: group.title,
+                subtitle: "\(group.entries.count) từ: \(previewWords)...",
+                iconName: "shippingbox.fill",
+                xpReward: max(15, group.entries.count * 5),
+                exercises: exercises
+            )
+        }
+    }
+
+    private static func buildExplanation(for entry: JaPackEntry) -> String? {
+        var parts: [String] = []
+        if !entry.cachDoc.isEmpty {
+            parts.append("Cách đọc: \(entry.cachDoc)")
+        }
+        if let viDu = entry.viDu, !viDu.isEmpty {
+            parts.append("Ví dụ: \(viDu)")
+        }
+        if let ghiChu = entry.ghiChu, !ghiChu.isEmpty {
+            parts.append(ghiChu)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
     }
 
     static func buildFlashcardPracticeLesson(from flashcards: [Flashcard], languageCode: String) -> LessonUnit? {
@@ -42,7 +179,7 @@ enum LessonCatalogService {
             languageCode: languageCode,
             unitNumber: 0,
             title: "Ôn tập từ vựng cá nhân",
-            subtitle: "Luyện \(selected.count) từ bạn đã lưu từ web & từ điển",
+            subtitle: "Luyện \(selected.count) từ bạn đã lưu từ web & JaPack",
             iconName: "star.circle.fill",
             xpReward: 20,
             exercises: exercises
@@ -56,7 +193,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "en-u1",
             languageCode: "en",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Chào hỏi & Giao tiếp đầu tiên",
             subtitle: "Làm quen từ vựng và mẫu câu chào hỏi hằng ngày",
             iconName: "hand.wave.fill",
@@ -107,7 +244,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "en-u2",
             languageCode: "en",
-            unitNumber: 2,
+            unitNumber: 102,
             title: "Đời sống & Đọc tin tức",
             subtitle: "Từ vựng thông dụng khi đọc báo và du lịch",
             iconName: "newspaper.fill",
@@ -150,7 +287,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "ja-u1",
             languageCode: "ja",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Chào hỏi tiếng Nhật cơ bản",
             subtitle: "Những câu giao tiếp thiết yếu hằng ngày",
             iconName: "sun.max.fill",
@@ -201,7 +338,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "ja-u2",
             languageCode: "ja",
-            unitNumber: 2,
+            unitNumber: 102,
             title: "Đi ăn & Mua sắm",
             subtitle: "Mẫu câu gọi món và hỏi giá",
             iconName: "cup.and.saucer.fill",
@@ -234,7 +371,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "ko-u1",
             languageCode: "ko",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Làm quen tiếng Hàn",
             subtitle: "Chào hỏi và cảm ơn cơ bản",
             iconName: "sparkles",
@@ -277,7 +414,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "zh-u1",
             languageCode: "zh",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Tiếng Trung cơ bản",
             subtitle: "Giao tiếp chào hỏi kèm Pinyin",
             iconName: "character.bubble.fill",
@@ -320,7 +457,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "fr-u1",
             languageCode: "fr",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Giao tiếp tiếng Pháp",
             subtitle: "Từ vựng làm quen cơ bản",
             iconName: "globe.europe.africa.fill",
@@ -353,7 +490,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "de-u1",
             languageCode: "de",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Tiếng Đức nhập môn",
             subtitle: "Chào hỏi và cảm ơn",
             iconName: "book.closed.fill",
@@ -386,7 +523,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "es-u1",
             languageCode: "es",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Tiếng Tây Ban Nha cơ bản",
             subtitle: "Những câu mở đầu thân thiện",
             iconName: "sun.and.horizon.fill",
@@ -419,7 +556,7 @@ enum LessonCatalogService {
         LessonUnit(
             id: "vi-u1",
             languageCode: "vi",
-            unitNumber: 1,
+            unitNumber: 101,
             title: "Tiếng Việt cơ bản",
             subtitle: "Chào hỏi và giao tiếp hằng ngày",
             iconName: "leaf.fill",

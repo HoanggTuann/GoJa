@@ -1,0 +1,26 @@
+{
+  "format": "JaPack",
+  "version": 1,
+  "name": "Tiếng Nhật Giao Tiếp (Mẫu)",
+  "summary": "15 từ vựng & mẫu câu cơ bản theo cấu trúc từ - nghĩa - cách đọc",
+  "author": "GoJa",
+  "language": "ja",
+  "nativeLanguage": "vi",
+  "items": [
+    { "tu": "おはようございます", "nghia": "Chào buổi sáng", "cachDoc": "ohayō gozaimasu" },
+    { "tu": "こんにちは", "nghia": "Xin chào (ban ngày)", "cachDoc": "konnichiwa" },
+    { "tu": "こんばんは", "nghia": "Chào buổi tối", "cachDoc": "konbanwa" },
+    { "tu": "ありがとうございます", "nghia": "Cảm ơn rất nhiều", "cachDoc": "arigatō gozaimasu" },
+    { "tu": "すみません", "nghia": "Xin lỗi / Làm phiền một chút", "cachDoc": "sumimasen" },
+    { "tu": "みず", "nghia": "Nước uống", "cachDoc": "mizu" },
+    { "tu": "おいしい", "nghia": "Ngon", "cachDoc": "oishii" },
+    { "tu": "いくらですか", "nghia": "Giá bao nhiêu?", "cachDoc": "ikura desu ka" },
+    { "tu": "たべます", "nghia": "Ăn", "cachDoc": "tabemasu" },
+    { "tu": "のみます", "nghia": "Uống", "cachDoc": "nomimasu" },
+    { "tu": "えき", "nghia": "Nhà ga", "cachDoc": "eki" },
+    { "tu": "でんしゃ", "nghia": "Tàu điện", "cachDoc": "densha" },
+    { "tu": "だいじょうぶ", "nghia": "Không sao đâu / Ổn", "cachDoc": "daijōbu" },
+    { "tu": "わかりました", "nghia": "Tôi hiểu rồi", "cachDoc": "wakarimashita" },
+    { "tu": "さようなら", "nghia": "Tạm biệt", "cachDoc": "sayōnara" }
+  ]
+}

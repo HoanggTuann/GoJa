@@ -150,10 +150,27 @@ struct SettingsView: View {
                         }
                         .disabled(jaPackURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isImportingFromURL)
                     }
+
+                    ForEach(storage.bundledSamplePacks()) { sample in
+                        Button {
+                            if let data = try? Data(contentsOf: sample.url),
+                               let summary = try? storage.importJaPack(from: data) {
+                                jaPackNotice = "Đã nạp gói mẫu \"\(summary.packName)\": +\(summary.addedFlashcards) từ, cập nhật \(summary.addedLessons) bài học."
+                            }
+                        } label: {
+                            HStack {
+                                Label("Nạp mẫu: \(sample.pack.name)", systemImage: "shippingbox")
+                                Spacer()
+                                Text("\(sample.pack.items.count) từ")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                 } header: {
                     Text("Định dạng JaPack (.japack)")
                 } footer: {
-                    Text("JaPack là định dạng JSON đổi đuôi sang .japack dùng để lưu, chia sẻ và nhập nhanh từ vựng, nguồn đọc & bài học.")
+                    Text("JaPack dùng cấu trúc JSON gồm danh sách từ - nghĩa - cách đọc nối tiếp nhau. Khi nhập vào, GoJa tự động thêm Flashcard và cập nhật lộ trình học cho ngôn ngữ đó.")
                 }
 
                 Section("Nguồn web & API học tập") {
